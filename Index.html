@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Quiz — Procedura Penale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d18;
+    --surface: rgba(255,255,255,0.045);
+    --border: rgba(255,255,255,0.09);
+    --gold: #e8a020;
+    --gold-soft: rgba(232,160,32,0.15);
+    --text: #e4dcd0;
+    --muted: #7a7060;
+    --green: #34d399;
+    --green-soft: rgba(52,211,153,0.13);
+    --red: #f87171;
+    --red-soft: rgba(248,113,113,0.13);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Source Sans 3', sans-serif; overscroll-behavior: none; }
+  body { background: radial-gradient(ellipse at 20% 0%, #1a1430 0%, #0d0d18 60%); }
+
+  /* SCREENS */
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* HOME */
+  #home { overflow-y: auto; padding: 32px 18px 60px; }
+  .home-inner { max-width: 600px; margin: 0 auto; }
+  .home-header { text-align: center; margin-bottom: 36px; }
+  .home-icon { font-size: 52px; margin-bottom: 10px; display: block; }
+  .home-title { font-family: 'Playfair Display', serif; font-size: clamp(26px, 7vw, 38px); font-weight: 900; color: var(--gold); line-height: 1.15; margin-bottom: 8px; }
+  .home-sub { color: var(--muted); font-size: 14px; font-weight: 300; }
+
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; margin-top: 24px; }
+  .diff-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .diff-btn { flex: 1; padding: 9px 0; border-radius: 9px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; font-family: 'Source Sans 3', sans-serif; cursor: pointer; transition: all 0.2s; font-weight: 600; }
+  .diff-btn.active { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
+
+  .topic-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .topic-card { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: all 0.22s; }
+  .topic-card:hover, .topic-card:active { background: rgba(255,255,255,0.08); border-color: rgba(232,160,32,0.35); transform: translateX(3px); }
+  .topic-icon { font-size: 22px; min-width: 32px; text-align: center; }
+  .topic-info { flex: 1; }
+  .topic-name { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .topic-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .topic-arrow { color: var(--gold); opacity: 0.5; font-size: 18px; }
+
+  /* QUIZ */
+  #quiz { }
+  .quiz-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.25); display: flex; align-items: center; gap: 14px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); }
+  .quiz-close { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: 'Source Sans 3', sans-serif; transition: all 0.2s; }
+  .quiz-close:hover { color: var(--text); }
+  .progress-wrap { flex: 1; }
+  .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #c86010); border-radius: 2px; transition: width 0.35s ease; }
+  .quiz-counter { font-size: 12px; color: var(--muted); white-space: nowrap; min-width: 36px; text-align: right; }
+
+  .quiz-body { flex: 1; overflow-y: auto; padding: 24px 18px 40px; }
+  .quiz-inner { max-width: 620px; margin: 0 auto; }
+  .quiz-topic-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 10px; }
+  .question-text { font-family: 'Playfair Display', serif; font-size: clamp(17px, 4.5vw, 22px); line-height: 1.5; color: #f0e8d8; margin-bottom: 26px; font-weight: 700; }
+  .options { display: flex; flex-direction: column; gap: 11px; margin-bottom: 22px; }
+  .opt-btn { width: 100%; text-align: left; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; color: var(--text); cursor: pointer; transition: all 0.18s; font-family: 'Source Sans 3', sans-serif; line-height: 1.5; }
+  .opt-btn:not(:disabled):hover { background: rgba(255,255,255,0.09); border-color: rgba(232,160,32,0.4); }
+  .opt-btn.correct { background: var(--green-soft) !important; border-color: var(--green) !important; color: #6ee7b7 !important; }
+  .opt-btn.wrong { background: var(--red-soft) !important; border-color: var(--red) !important; color: #fca5a5 !important; }
+  .opt-btn:disabled { cursor: default; }
+
+  .explanation-box { background: var(--gold-soft); border: 1px solid rgba(232,160,32,0.3); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
+  .explanation-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 7px; }
+  .explanation-text { font-size: 13.5px; color: #c8bca8; line-height: 1.7; }
+  .art-ref { color: var(--gold); font-weight: 600; }
+
+  .next-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--gold), #c86010); color: #1a1008; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Source Sans 3', sans-serif; letter-spacing: 0.3px; transition: all 0.2s; }
+  .next-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(232,160,32,0.35); }
+
+  /* RESULT */
+  #result { overflow-y: auto; padding: 36px 18px 70px; }
+  .result-inner { max-width: 580px; margin: 0 auto; text-align: center; }
+  .result-emoji { font-size: 62px; margin-bottom: 14px; display: block; }
+  .result-score { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 900; color: var(--gold); margin-bottom: 6px; }
+  .result-label { color: var(--muted); font-size: 15px; margin-bottom: 4px; }
+  .result-topic { color: #5a5040; font-size: 12px; margin-bottom: 32px; }
+  .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+  .btn-gold { background: linear-gradient(135deg, var(--gold), #c86010); color: #1a1008; border: none; border-radius: 10px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Source Sans 3', sans-serif; transition: all 0.2s; }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 11px 20px; font-size: 14px; cursor: pointer; font-family: 'Source Sans 3', sans-serif; transition: all 0.2s; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.08); }
+
+  .recap-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; text-align: left; }
+  .recap-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 14px; }
+  .recap-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .recap-item:last-child { border-bottom: none; }
+  .recap-icon { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+  .recap-q { font-size: 13px; color: #b0a898; line-height: 1.45; margin-bottom: 3px; }
+  .recap-ans { font-size: 12px; color: var(--green); }
+  .recap-wrong { font-size: 12px; color: #fca5a5; }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(232,160,32,0.25); border-radius: 2px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: fadeIn 0.3s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="home-inner">
+    <div class="home-header">
+      <span class="home-icon">⚖️</span>
+      <h1 class="home-title">Quiz<br>Procedura Penale</h1>
+      <p class="home-sub">Scegli un argomento e inizia il ripasso</p>
+    </div>
+
+    <div class="section-label">Difficoltà</div>
+    <div class="diff-row">
+      <button class="diff-btn" data-diff="easy" onclick="setDiff('easy')">Facile</button>
+      <button class="diff-btn active" data-diff="medium" onclick="setDiff('medium')">Medio</button>
+      <button class="diff-btn" data-diff="hard" onclick="setDiff('hard')">Difficile</button>
+    </div>
+
+    <div class="section-label" style="margin-top:28px;">Argomenti</div>
+    <div class="topic-list" id="topicList"></div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz" class="screen">
+  <div class="quiz-header">
+    <button class="quiz-close" onclick="goHome()">✕ Esci</button>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <div class="quiz-counter" id="quizCounter">1/10</div>
+  </div>
+  <div class="quiz-body">
+    <div class="quiz-inner" id="quizInner"></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="result" class="screen">
+  <div class="result-inner" id="resultInner"></div>
+</div>
+
+<script>
+// ============================================================
+// BANCA DOMANDE — 210+ domande su 15 argomenti
+// ============================================================
+const DB = {
+
+indagini_preliminari: {
+  label: "Indagini Preliminari", icon: "🔍",
+  questions: [
+    { q: "Qual è il termine ordinario per la conclusione delle indagini preliminari in caso di reati non gravi?", opts: ["A) 6 mesi","B) 1 anno","C) 18 mesi","D) 2 anni"], c: 0, e: "L'art. 405 c.p.p. stabilisce un termine di 6 mesi dalla data di iscrizione della notizia di reato nel registro, salvo proroghe autorizzate dal GIP." },
+    { q: "Chi è il 'dominus' delle indagini preliminari?", opts: ["A) La Polizia Giudiziaria","B) Il Pubblico Ministero","C) Il GIP","D) Il GUP"], c: 1, e: "Il PM dirige le indagini ex art. 326 c.p.p. La PG svolge attività di polizia giudiziaria sotto la direzione del PM." },
+    { q: "In quale fase si collocano le indagini preliminari nel processo penale italiano?", opts: ["A) Dopo il rinvio a giudizio","B) Prima dell'esercizio dell'azione penale","C) Durante il dibattimento","D) Dopo la sentenza di primo grado"], c: 1, e: "Le indagini preliminari precedono la decisione del PM di esercitare l'azione penale o chiedere l'archiviazione (art. 326 ss. c.p.p.)." },
+    { q: "Qual è il termine massimo delle indagini preliminari, comprensivo di proroghe, per i reati più gravi?", opts: ["A) 1 anno","B) 18 mesi","C) 2 anni","D) 5 anni"], c: 2, e: "L'art. 407 c.p.p. prevede un termine massimo di 2 anni per le ipotesi più gravi (reati di cui all'art. 407 co. 2 c.p.p.), salvo ulteriori proroghe in casi eccezionali." },
+    { q: "Cosa succede se il PM non esercita l'azione penale né chiede l'archiviazione entro i termini?", opts: ["A) Il processo si estingue automaticamente","B) Il GIP ordina al PM di formulare l'imputazione","C) Il GIP avoca le indagini alla PG","D) La persona offesa può proporre opposizione"], c: 1, e: "L'art. 412 c.p.p. prevede che il GIP fissi un termine al PM per le sue determinazioni; in caso di ulteriore inerzia interviene il Procuratore Generale." },
+    { q: "Le indagini preliminari sono segrete?", opts: ["A) Sempre e per tutti","B) Solo per i terzi; l'indagato ha diritto di accesso immediato","C) Di regola, salvo i casi di discovery previsti dalla legge","D) Non esiste segreto nelle indagini preliminari"], c: 2, e: "L'art. 329 c.p.p. sancisce il segreto sugli atti d'indagine, con eccezioni (es. atti utilizzati in udienza, atti che l'indagato ha diritto di conoscere per esercitare la difesa)." },
+    { q: "Cosa si intende per 'avocazione' delle indagini?", opts: ["A) La delega del PM alla PG","B) Il trasferimento coattivo delle indagini al Procuratore Generale","C) La chiusura delle indagini da parte del GIP","D) La richiesta di giudizio abbreviato"], c: 1, e: "L'avocazione (art. 372 ss. c.p.p.) consente al Procuratore Generale di sostituirsi al PM nei casi di inerzia o di inosservanza dei termini." },
+    { q: "Il GIP può disporre atti di indagine autonomamente durante la fase preliminare?", opts: ["A) Sì, in qualsiasi momento","B) No, il GIP è un giudice e non compie indagini","C) Solo su richiesta della difesa","D) Solo per reati di criminalità organizzata"], c: 1, e: "Il GIP è 'giudice delle garanzie': non compie indagini. Interviene su richiesta del PM o delle parti per adottare provvedimenti cautelari, garantire garanzie difensive ecc." },
+    { q: "La proroga dei termini delle indagini preliminari richiede:", opts: ["A) Solo l'autorizzazione del Procuratore della Repubblica","B) Autorizzazione del GIP su richiesta del PM","C) Decreto del Ministro della Giustizia","D) Nessuna formalità"], c: 1, e: "L'art. 406 c.p.p. prevede che il PM possa chiedere al GIP una proroga motivata del termine; il GIP decide con decreto motivato." },
+    { q: "Quale principio regola il coordinamento tra più Procure in casi di connessione?", opts: ["A) Principio di unicità dell'azione penale","B) Principio del giudice naturale","C) Norme sulla competenza e sui conflitti tra uffici del PM","D) Principio di immediatezza"], c: 2, e: "In caso di connessione, si applicano le norme sulla competenza (artt. 51 ss. c.p.p.) che determinano quale Procura è competente, con possibilità di conflitti positivi o negativi risolti dalla Corte di Cassazione." },
+  ]
+},
+
+notizia_reato: {
+  label: "Notizia di Reato", icon: "📋",
+  questions: [
+    { q: "Come viene definita la 'notizia di reato' nel codice di procedura penale?", opts: ["A) Qualsiasi informazione che faccia ipotizzare un reato","B) Solo la denuncia formale della PG","C) Esclusivamente la querela della persona offesa","D) Il verbale di arresto in flagranza"], c: 0, e: "La notizia di reato è qualsiasi informazione idonea a far ipotizzare la commissione di un reato, indipendentemente dalla provenienza (art. 330 c.p.p.)." },
+    { q: "Qual è il momento in cui la notizia di reato assume rilevanza giuridica?", opts: ["A) Quando viene portata a conoscenza del GIP","B) Quando la PG o il PM la ricevono","C) Quando viene iscritta nel registro ex art. 335 c.p.p.","D) Solo dopo la convalida del GIP"], c: 2, e: "La notizia di reato acquista rilevanza processuale formale con l'iscrizione nel registro delle notizie di reato ex art. 335 c.p.p., da cui decorrono i termini delle indagini." },
+    { q: "La denuncia da parte di un privato cittadino è:", opts: ["A) Sempre obbligatoria","B) Facoltativa, salvo che la legge la renda obbligatoria","C) Solo per reati procedibili d'ufficio","D) Equiparata alla querela"], c: 1, e: "Per i privati cittadini la denuncia è facoltativa, salvo ipotesi di denuncia obbligatoria (es. omessa denuncia di reati contro la personalità dello Stato, art. 364 c.p.)." },
+    { q: "Cosa distingue la denuncia dalla querela?", opts: ["A) La denuncia è atto del PM, la querela della PG","B) La querela è condizione di procedibilità e deve provenire dalla persona offesa; la denuncia è semplice comunicazione di un reato","C) Non c'è differenza sostanziale","D) La denuncia vale solo per reati dolosi"], c: 1, e: "La querela (art. 336 c.p.p.) è condizione di procedibilità per reati procedibili a querela; deve provenire dalla persona offesa entro 3 mesi dal fatto. La denuncia (art. 333 c.p.p.) è semplice comunicazione di notizia di reato." },
+    { q: "La notizia di reato appresa di iniziativa dalla PG è denominata:", opts: ["A) Referto","B) Notizia di reato qualificata","C) Notizia di reato acquisita d'iniziativa (c.d. notizia di reato 'anonima')","D) Esposto"], c: 1, e: "La notizia di reato può essere 'qualificata' (denuncia, querela, referto) o acquisita d'iniziativa dalla PG attraverso l'attività di osservazione e controllo del territorio." },
+    { q: "Il referto è presentato da:", opts: ["A) Qualsiasi cittadino","B) Il pubblico ministero","C) Chi esercita una professione sanitaria","D) La persona offesa dal reato"], c: 2, e: "L'art. 334 c.p.p. obbliga chi esercita una professione sanitaria a presentare referto quando abbia prestato assistenza in casi che possono presentare caratteri di reato." },
+    { q: "Entro quanto tempo deve essere trasmessa la notizia di reato al PM dalla PG?", opts: ["A) Immediatamente","B) Senza ritardo","C) Entro 48 ore","D) Entro 5 giorni"], c: 1, e: "L'art. 347 c.p.p. prevede che la PG trasmetta senza ritardo la notizia di reato al PM competente, anche in forma orale per le situazioni più urgenti." },
+    { q: "Quali sono le notizie di reato c.d. 'qualificate'?", opts: ["A) Denuncia, querela, istanza e referto","B) Solo denuncia e querela","C) Querela e istanza","D) Solo il referto medico-legale"], c: 0, e: "Le notizie di reato qualificate sono la denuncia (artt. 331-333 c.p.p.), la querela (art. 336), l'istanza (art. 341) e il referto (art. 334). Sono qualificate perché provengono da soggetti determinati e hanno forma prestabilita." },
+    { q: "Una notizia di reato anonima:", opts: ["A) Non può essere utilizzata in alcun modo","B) Deve essere immediatamente distrutta","C) Non può essere iscritta, ma può dare avvio ad accertamenti della PG","D) Ha lo stesso valore di una denuncia"], c: 2, e: "L'anonimo non è iscrivibile ex art. 333 co. 3 c.p.p., ma può orientare l'attività d'iniziativa della PG per verificare l'esistenza di elementi che fondino una notizia di reato iscrivibile." },
+    { q: "Chi può proporre l'opposizione alla richiesta di archiviazione?", opts: ["A) Chiunque abbia interesse","B) Solo il PM","C) La persona offesa che abbia dichiarato di voler essere informata","D) Il difensore dell'indagato"], c: 2, e: "Ai sensi dell'art. 410 c.p.p., la persona offesa che nella denuncia/querela abbia dichiarato di voler essere avvisata può opporsi alla richiesta di archiviazione entro 20 giorni dalla comunicazione." },
+  ]
+},
+
+iscrizione_ndr: {
+  label: "Iscrizione della Notizia di Reato", icon: "📝",
+  questions: [
+    { q: "In quale registro viene iscritta la notizia di reato?", opts: ["A) Registro degli indagati","B) Registro delle notizie di reato (mod. 21 e mod. 44)","C) Registro del GIP","D) Registro delle sentenze"], c: 1, e: "Il PM iscrive la notizia di reato nel registro di cui all'art. 335 c.p.p.: il mod. 21 se il soggetto è noto, il mod. 44 se ignoto." },
+    { q: "Entro quanto tempo dalla ricezione della notizia di reato il PM deve procedere all'iscrizione?", opts: ["A) Immediatamente","B) Entro 24 ore","C) Entro 48 ore","D) Entro 5 giorni"], c: 0, e: "L'iscrizione deve avvenire immediatamente (art. 335 c.p.p.): non è previsto un termine dilatorio. Ritardi non giustificati possono assumere rilevanza disciplinare." },
+    { q: "Da quando decorrono i termini delle indagini preliminari?", opts: ["A) Dal momento del reato","B) Dalla data dell'iscrizione nel registro ex art. 335 c.p.p.","C) Dal primo atto garantito","D) Dalla richiesta di rinvio a giudizio"], c: 1, e: "I termini di durata delle indagini (art. 405-407 c.p.p.) decorrono dalla data dell'iscrizione della notizia di reato nel registro." },
+    { q: "L'indagato ha diritto di conoscere l'iscrizione a suo carico?", opts: ["A) No, mai","B) Sì, immediatamente dopo l'iscrizione","C) Solo se lo richiede, e salvo segreto investigativo","D) Solo dopo la chiusura delle indagini"], c: 2, e: "L'art. 335 co. 3 c.p.p. prevede che l'indagato e la persona offesa possano richiedere di conoscere le iscrizioni a loro carico, salvo che il PM abbia disposto la segretazione per esigenze investigative." },
+    { q: "Cosa succede se il PM ritarda ingiustificatamente l'iscrizione della notizia di reato?", opts: ["A) L'atto è nullo","B) Il GIP può ordinare l'iscrizione immediata","C) L'iscrizione si considera avvenuta nel momento in cui doveva essere effettuata ai fini del computo dei termini","D) La notizia di reato decade"], c: 2, e: "La Corte di Cassazione ha affermato che il ritardo ingiustificato nell'iscrizione non può avvantaggiare il PM: i termini si computano da quando l'iscrizione doveva essere effettuata (retrodatazione giurisprudenziale)." },
+    { q: "Il GIP può controllare la data di iscrizione da parte del PM?", opts: ["A) No, la data è scelta liberamente dal PM","B) Sì, può verificare la correttezza della data e, in caso di ritardo, retrodatare ai fini del computo dei termini","C) Solo su richiesta dell'indagato","D) Solo il Procuratore Generale può controllarlo"], c: 1, e: "Il GIP ha il potere-dovere di controllare la correttezza della data di iscrizione; in caso di ritardo ingiustificato, fissa d'ufficio la data cui i termini devono essere retrodatati (art. 407 co. 3-bis c.p.p.)." },
+    { q: "Qual è la differenza tra il 'mod. 21' e il 'mod. 44'?", opts: ["A) Mod. 21 per reati gravi, mod. 44 per reati minori","B) Mod. 21 per soggetti noti, mod. 44 per ignoti","C) Mod. 21 per PG, mod. 44 per denuncia privata","D) Non esiste differenza formale"], c: 1, e: "Il mod. 21 (registro degli indagati noti) si usa quando la notizia di reato riguarda persone determinate. Il mod. 44 si usa quando l'autore è ignoto e si procede 'contro ignoti'." },
+    { q: "La c.d. 'iscrizione a modello 45' riguarda:", opts: ["A) Reati di criminalità organizzata","B) Atti non costituenti notizia di reato, relativi ad affari generici","C) Intercettazioni telefoniche","D) Misure cautelari urgenti"], c: 1, e: "Il mod. 45 è il registro degli atti non costituenti notizia di reato: vi vengono iscritti atti che richiedono una valutazione preliminare prima di decidere se iscrivere formalmente una notizia di reato." },
+    { q: "L'iscrizione della notizia di reato ha effetti sulla prescrizione del reato?", opts: ["A) Non ha alcun effetto sulla prescrizione","B) Sospende la prescrizione","C) Interrompe la prescrizione","D) Estingue la prescrizione"], c: 2, e: "Ai sensi dell'art. 160 c.p., l'iscrizione nel registro delle notizie di reato (e più precisamente la prima comunicazione giudiziaria) è atto interruttivo della prescrizione. La prescrizione riprende a decorrere dal giorno dell'interruzione." },
+    { q: "Quando la notizia di reato è iscritta 'contro ignoti', quando il PM deve iscrivere il nominativo di un soggetto identificato?", opts: ["A) Solo dopo la chiusura delle indagini","B) Immediatamente, non appena emerge un soggetto identificato","C) Solo dopo il rinvio a giudizio","D) Solo se vi sono gravi indizi di colpevolezza"], c: 1, e: "Appena emerge il nominativo di un indagato, il PM deve iscriverlo immediatamente nel registro ex art. 335 c.p.p., facendo decorrere da quel momento i termini di indagine nei suoi confronti." },
+  ]
+},
+
+ruoli_pg_pm_gip: {
+  label: "Ruoli PG / PM / GIP", icon: "⚖️",
+  questions: [
+    { q: "La Polizia Giudiziaria, nel compimento degli atti d'indagine, agisce:", opts: ["A) Autonomamente e senza limiti","B) Sotto la direzione e il controllo del PM","C) Sotto la direzione del GIP","D) Su ordine del Ministro dell'Interno"], c: 1, e: "L'art. 109 Cost. e l'art. 327 c.p.p. sanciscono che il PM ha la direzione della PG per la durata delle indagini preliminari. La PG ha anche un'attività d'iniziativa, ma in subordinazione funzionale al PM." },
+    { q: "Il GIP è:", opts: ["A) Un organo d'accusa","B) Il giudice che dirige le indagini","C) Il giudice delle garanzie nella fase preliminare","D) Un organo della PG"], c: 2, e: "Il GIP (Giudice delle Indagini Preliminari) non compie indagini ma è il garante della legalità nella fase preliminare: emette misure cautelari, decide sull'archiviazione, autorizza intercettazioni ecc." },
+    { q: "Il GIP può disporre il compimento di atti di indagine di propria iniziativa?", opts: ["A) Sì, in ogni momento","B) No: il GIP è un giudice e non compie indagini","C) Sì, solo per reati di mafia","D) Sì, ma solo su segnalazione della PG"], c: 1, e: "Il GIP non ha potere investigativo autonomo. Può sollecitare il PM (ad es. nel caso di richiesta di archiviazione 'coatta') ma non può disporre atti d'indagine unilateralmente." },
+    { q: "Qual è la funzione del Pubblico Ministero nell'ordinamento italiano?", opts: ["A) Giudicare i reati","B) Esercitare l'azione penale e dirigere le indagini","C) Emettere misure cautelari","D) Difendere l'indagato d'ufficio"], c: 1, e: "Il PM, parte pubblica nel processo penale, ha il compito di esercitare l'azione penale (art. 112 Cost.) ed è titolare delle indagini preliminari, che dirige con la collaborazione della PG." },
+    { q: "La PG può procedere all'arresto in flagranza:", opts: ["A) Solo su ordine del PM","B) Di propria iniziativa, nei casi previsti dalla legge","C) Solo con autorizzazione del GIP","D) Solo per reati con pena superiore a 10 anni"], c: 1, e: "L'arresto obbligatorio in flagranza (art. 380 c.p.p.) e quello facoltativo (art. 381 c.p.p.) sono compiuti dalla PG di propria iniziativa, ferma la necessità di comunicarlo al PM entro le 24 ore." },
+    { q: "Il GUP (Giudice dell'Udienza Preliminare) differisce dal GIP perché:", opts: ["A) Il GUP compie le indagini, il GIP no","B) Il GUP decide se rinviare a giudizio o emettere sentenza di non luogo a procedere all'udienza preliminare","C) Il GUP e il GIP sono la stessa figura","D) Il GUP emette le misure cautelari"], c: 1, e: "Il GIP interviene durante le indagini; il GUP (artt. 416 ss. c.p.p.) è il giudice dell'udienza preliminare: valuta la richiesta di rinvio a giudizio e decide con sentenza di non luogo a procedere o decreto che dispone il giudizio." },
+    { q: "Cosa si intende per 'delega' del PM alla PG?", opts: ["A) La PG sostituisce il PM nelle udienze","B) Il PM autorizza la PG a compiere specifici atti di indagine in sua vece","C) La PG denuncia il PM per omissione","D) La PG acquisisce autonomia investigativa permanente"], c: 1, e: "Il PM può delegare la PG a compiere atti di indagine specifici (art. 370 c.p.p.), mantenendone però la direzione. La delega non trasferisce la titolarità dell'indagine." },
+    { q: "L'obbligo di astensione del GIP per incompatibilità è previsto:", opts: ["A) Solo se il GIP è parente dell'imputato","B) Il GIP che ha emesso misura cautelare è incompatibile a svolgere le funzioni di GUP","C) Mai, non esiste incompatibilità per il GIP","D) Solo nei processi di mafia"], c: 1, e: "L'art. 34 c.p.p. prevede varie ipotesi di incompatibilità: tra le più rilevanti, il GIP che ha emesso misure cautelari non può svolgere funzioni di GUP nello stesso procedimento." },
+    { q: "Il PM può impugnare le sentenze di proscioglimento?", opts: ["A) No, il PM non è parte del processo","B) Sì, il PM ha pieni poteri di impugnazione","C) Solo per appello, non per ricorso in Cassazione","D) Solo nei casi espressamente previsti dalla legge, con limiti introdotti dalla riforma Cartabia"], c: 3, e: "La riforma Cartabia (d.lgs. 150/2022) ha limitato significativamente i poteri di appello del PM avverso le sentenze di proscioglimento, mantenendo però la facoltà di ricorso per cassazione nei casi previsti." },
+    { q: "Quale organo decide sull'istanza di riesame avverso i provvedimenti cautelari?", opts: ["A) Il GIP","B) Il Tribunale del Riesame (Tribunale della Libertà)","C) La Corte d'Appello","D) Il GUP"], c: 1, e: "Il Tribunale del Riesame (art. 309 c.p.p.), composito collegio di tre giudici, decide sui riesami delle misure cautelari personali. Per le misure reali si applicano le norme sul riesame del sequestro (art. 324 c.p.p.)." },
+  ]
+},
+
+mezzi_prova: {
+  label: "Mezzi di Ricerca della Prova", icon: "🔎",
+  questions: [
+    { q: "I mezzi di ricerca della prova previsti dal codice di procedura penale sono:", opts: ["A) Ispezioni, perquisizioni, sequestri e intercettazioni","B) Testimonianza, perizia, documentazione","C) Confronto, ricognizione, esperimento giudiziale","D) Esame, controesame, riesame"], c: 0, e: "Gli artt. 244-271 c.p.p. disciplinano i mezzi di ricerca della prova: ispezioni (artt. 244-246), perquisizioni (artt. 247-252), sequestri (artt. 253-265), intercettazioni (artt. 266-271)." },
+    { q: "La perquisizione domiciliare richiede:", opts: ["A) Solo l'autorizzazione orale del PM","B) Decreto motivato del PM, salvo casi di flagranza o urgenza","C) Sempre l'autorizzazione del GIP","D) Il consenso dell'interessato"], c: 1, e: "La perquisizione domiciliare è disposta con decreto motivato del PM (art. 247 c.p.p.). In caso di flagranza di reato o situazioni di urgenza, la PG può procedere d'iniziativa, con convalida successiva del PM." },
+    { q: "Il sequestro probatorio si distingue dal sequestro preventivo perché:", opts: ["A) Il sequestro probatorio è disposto dal GIP, quello preventivo dal PM","B) Il sequestro probatorio serve ad acquisire elementi di prova; quello preventivo a impedire l'aggravamento o la protrazione del reato","C) Non c'è distinzione","D) Il sequestro probatorio vale solo in dibattimento"], c: 1, e: "Il sequestro probatorio (art. 253 c.p.p.) ha finalità probatoria: assicura cose pertinenti al reato. Il sequestro preventivo (art. 321 c.p.p.) ha finalità cautelare: impedisce che la cosa pertinente al reato possa aggravare o protrarre le conseguenze del reato o agevolare la commissione di altri reati." },
+    { q: "Le intercettazioni di comunicazioni richiedono:", opts: ["A) Solo il decreto del PM","B) Decreto motivato del GIP, su richiesta del PM, con gravi indizi di reato e necessità dell'intercettazione","C) Autorizzazione ministeriale","D) Consenso di almeno una delle parti intercettate"], c: 1, e: "L'art. 267 c.p.p. richiede decreto motivato del GIP su richiesta del PM, con i presupposti di gravi indizi di reato e assoluta indispensabilità ai fini della prosecuzione delle indagini." },
+    { q: "Cosa si intende per 'ispezione' come mezzo di ricerca della prova?", opts: ["A) L'esame di testi al dibattimento","B) L'osservazione e il rilievo di luoghi, cose o persone per accertare tracce o effetti del reato","C) L'acquisizione di documenti bancari","D) L'attività di pedinamento della PG"], c: 1, e: "L'ispezione (art. 244 c.p.p.) consiste nell'osservazione di luoghi, cose o persone finalizzata a verificare tracce, effetti materiali o altri elementi utili all'accertamento del reato." },
+    { q: "Il sequestro di corrispondenza è disciplinato da:", opts: ["A) Art. 253 c.p.p.","B) Art. 254 c.p.p., con particolari garanzie per la corrispondenza con il difensore","C) Art. 266 c.p.p. come intercettazione","D) È vietato in ogni caso"], c: 1, e: "Il sequestro di corrispondenza è disciplinato dall'art. 254 c.p.p. La corrispondenza con il difensore gode di protezione rafforzata (art. 103 c.p.p.) e non può essere sequestrata, salvo che costituisca corpo del reato." },
+    { q: "In quale caso la PG può procedere a perquisizione senza decreto del PM?", opts: ["A) Mai","B) In caso di flagranza di reato o evasione, quando vi è fondato motivo di trovare il corpo del reato","C) Sempre, con convalida successiva entro 48 ore","D) Solo per reati di mafia"], c: 1, e: "L'art. 352 c.p.p. consente alla PG di procedere a perquisizione d'iniziativa in caso di flagranza di reato o di evasione, quando vi è fondato motivo di trovare il corpo del reato o cose pertinenti al reato. Deve darne immediata notizia al PM." },
+    { q: "Qual è il termine entro cui il PM deve richiedere la convalida del sequestro operato dalla PG?", opts: ["A) 24 ore","B) 48 ore","C) 5 giorni","D) 10 giorni"], c: 1, e: "Il PM deve richiedere la convalida del sequestro operato d'iniziativa dalla PG entro 48 ore (art. 355 c.p.p.). In mancanza, il sequestro perde efficacia." },
+    { q: "Le intercettazioni c.d. 'ambientali' sono:", opts: ["A) Vietate in ogni caso","B) Intercettazioni di comunicazioni tra presenti, anche in luoghi privati, con gli stessi presupposti di quelle telefoniche","C) Ammesse senza decreto del GIP se effettuate in luogo pubblico","D) Regolate solo per la criminalità organizzata"], c: 1, e: "Le intercettazioni ambientali (art. 266 co. 2 c.p.p.) riguardano comunicazioni tra presenti. Richiedono gli stessi presupposti di quelle telefoniche; in luoghi domiciliari sono ammesse solo se vi è fondato motivo di ritenere che vi si stia svolgendo l'attività criminosa." },
+    { q: "Il c.d. 'captatore informatico' (trojan) è:", opts: ["A) Vietato in ogni caso","B) Ammesso solo per la criminalità organizzata","C) Strumento di intercettazione mediante installazione di software su dispositivi, ammesso con presupposti rafforzati dalla legge n. 103/2017","D) Equiparato alla normale intercettazione telefonica"], c: 2, e: "La l. 103/2017 ha disciplinato il captatore informatico (c.d. trojan), ammettendolo con presupposti rafforzati: per i reati più gravi (tra cui quelli di criminalità organizzata) con decreto del GIP; per altri reati solo in luoghi diversi dal domicilio." },
+  ]
+},
+
+interrogatorio: {
+  label: "Interrogatorio e Persone Informate", icon: "🗣️",
+  questions: [
+    { q: "L'interrogatorio dell'indagato nelle indagini preliminari è regolato principalmente da:", opts: ["A) Art. 64 e 65 c.p.p.","B) Art. 194 c.p.p.","C) Art. 350 c.p.p. per la PG e artt. 64-65 per il PM","D) Art. 209 c.p.p."], c: 2, e: "L'art. 350 c.p.p. disciplina le sommarie informazioni assunte dalla PG; gli artt. 64 e 65 c.p.p. regolano l'interrogatorio davanti al PM, con obbligo di avvisi e garanzie difensive." },
+    { q: "Prima dell'interrogatorio, all'indagato devono essere comunicati:", opts: ["A) Solo le generalità del PM","B) Gli avvisi ex art. 64 c.p.p.: facoltà di non rispondere, nessuna conseguenza dal silenzio, possibilità di dichiarazioni utilizzabili","C) Il nome del giudice competente","D) L'elenco delle prove a suo carico"], c: 1, e: "L'art. 64 c.p.p. impone al PM di avvisare l'indagato: che le sue dichiarazioni possono essere usate contro di lui; che può non rispondere (diritto al silenzio); che se risponde, il silenzio o le dichiarazioni possono essere utilizzate." },
+    { q: "Le persone informate sui fatti (testimoni nelle indagini) sono sentite con le forme di:", opts: ["A) Interrogatorio con garanzie difensive","B) Sommarie informazioni ex art. 362 c.p.p. (dal PM) o art. 351 c.p.p. (dalla PG)","C) Esame dibattimentale anticipato","D) Incidente probatorio obbligatorio"], c: 1, e: "Il PM assume sommarie informazioni dalle persone informate sui fatti ex art. 362 c.p.p. La PG lo fa ex art. 351 c.p.p. Non si tratta di testimonianza dibattimentale, e le dichiarazioni hanno valore limitato." },
+    { q: "Il diritto al silenzio dell'indagato:", opts: ["A) Non esiste nel codice italiano","B) Non può essere esercitato durante le indagini","C) È garantito dall'art. 64 c.p.p. e dall'art. 24 Cost. e non può dar luogo a conseguenze negative","D) Comporta la confessione tacita"], c: 2, e: "Il diritto al silenzio è una garanzia fondamentale: l'indagato può non rispondere senza che ciò possa essere interpretato come ammissione di colpevolezza (art. 64 co. 3 c.p.p.)." },
+    { q: "Cosa avviene se un testimone mente durante le sommarie informazioni rese alla PG?", opts: ["A) Non è prevista alcuna sanzione in fase di indagini","B) Risponde di favoreggiamento personale","C) Risponde di false dichiarazioni al PM o alla PG ex art. 371-bis c.p.","D) Le dichiarazioni vengono automaticamente escluse"], c: 2, e: "L'art. 371-bis c.p. punisce le false dichiarazioni rese al PM nel corso delle indagini. L'art. 378 c.p. punisce il favoreggiamento. Le false dichiarazioni alla PG possono integrare il reato di false informazioni al P.M." },
+    { q: "L'indagato può essere accompagnato dal difensore durante l'interrogatorio davanti al PM?", opts: ["A) No, non ha diritto alla presenza del difensore","B) Sì, il difensore ha diritto di assistere ed è avvisato prima dell'interrogatorio","C) Solo se lo richiede espressamente","D) Solo se è in stato di custodia cautelare"], c: 1, e: "Il difensore ha diritto di assistere all'interrogatorio (art. 364 c.p.p.) ed è avvisato almeno 24 ore prima, salvo casi di urgenza. La mancata notifica al difensore determina la nullità dell'atto." },
+    { q: "Cosa sono le 'sommarie informazioni spontanee' ex art. 350 co. 7 c.p.p.?", opts: ["A) Dichiarazioni rese dall'indagato di sua iniziativa alla PG, utilizzabili solo per le contestazioni in dibattimento","B) Testimonianze rese spontaneamente senza convocazione","C) Informazioni rese dalla vittima senza formalità","D) Dichiarazioni del PM fuori udienza"], c: 0, e: "Le dichiarazioni spontanee dell'indagato alla PG (art. 350 co. 7 c.p.p.) sono utilizzabili solo per le contestazioni in dibattimento ex art. 503 c.p.p., e non come piena prova." },
+    { q: "L'interrogatorio di garanzia è:", opts: ["A) L'interrogatorio dell'indagato prima dell'emissione della misura cautelare","B) L'interrogatorio dell'arrestato/fermato entro 48 ore dall'arresto ad opera del GIP","C) Una forma speciale di esame dibattimentale","D) L'interrogatorio del testimone vulnerabile"], c: 1, e: "L'interrogatorio di garanzia (art. 294 c.p.p.) deve essere effettuato dal GIP entro 5 giorni dall'esecuzione della misura cautelare, per verificare la sussistenza delle condizioni di applicabilità e permettere all'indagato di difendersi." },
+    { q: "Le dichiarazioni rese dall'indagato durante le indagini preliminari:", opts: ["A) Hanno piena valenza probatoria in dibattimento","B) Non possono essere utilizzate","C) Possono essere usate per le contestazioni ex art. 503 c.p.p. e, in certi casi, come prova se vi è stata discovery completa","D) Sono sempre lette in dibattimento come prova documentale"], c: 2, e: "Le dichiarazioni dell'indagato non sono di regola utilizzabili direttamente come prova; possono servire per contestazioni in dibattimento (art. 503 c.p.p.) o essere acquisite come prova in casi specifici (es. consenso dell'imputato)." },
+    { q: "Cosa avviene se l'indagato viene interrogato senza i previsti avvisi ex art. 64 c.p.p.?", opts: ["A) Nulla, le dichiarazioni sono comunque valide","B) Le dichiarazioni sono inutilizzabili","C) L'interrogatorio va ripetuto con gli avvisi","D) Il PM può chiedere la sanatoria al GIP"], c: 1, e: "L'omissione degli avvisi ex art. 64 c.p.p. determina l'inutilizzabilità delle dichiarazioni rese (art. 64 co. 3-bis c.p.p.). Si tratta di una sanzione processuale di inutilizzabilità, non di nullità." },
+  ]
+},
+
+principi_costituzionali: {
+  label: "Principi Costituzionali", icon: "📜",
+  questions: [
+    { q: "Il principio del giusto processo è sancito da:", opts: ["A) Art. 111 Cost.","B) Art. 24 Cost.","C) Art. 112 Cost.","D) Art. 27 Cost."], c: 0, e: "L'art. 111 Cost. (riformato nel 1999) sancisce i principi del giusto processo: contraddittorio nella formazione della prova, terzietà del giudice, ragionevole durata del processo." },
+    { q: "Il principio di obbligatorietà dell'azione penale è stabilito da:", opts: ["A) Art. 27 Cost.","B) Art. 112 Cost.","C) Art. 24 Cost.","D) Art. 111 Cost."], c: 1, e: "L'art. 112 Cost. stabilisce che il PM ha l'obbligo di esercitare l'azione penale: è un principio cardine che esclude la discrezionalità dell'accusa." },
+    { q: "La presunzione di innocenza è garantita da:", opts: ["A) Art. 111 Cost.","B) Art. 27 co. 2 Cost.","C) Art. 24 Cost.","D) Art. 13 Cost."], c: 1, e: "L'art. 27 co. 2 Cost. stabilisce che 'l'imputato non è considerato colpevole sino alla condanna definitiva': è la presunzione di non colpevolezza (o innocenza), fondamento dello stato liberale di diritto." },
+    { q: "Il diritto di difesa è inviolabile ex art. 24 Cost. Questo implica:", opts: ["A) Solo il diritto a un avvocato retribuito dallo Stato","B) Il diritto di difendersi in ogni stato e grado del procedimento, anche con difesa d'ufficio se necessario","C) Il diritto a scegliere il giudice","D) Il diritto a non subire arresti"], c: 1, e: "L'art. 24 Cost. sancisce l'inviolabilità del diritto di difesa in ogni stato e grado del procedimento. Comprende il diritto all'assistenza tecnica del difensore, la difesa d'ufficio per i non abbienti e il gratuito patrocinio." },
+    { q: "Il principio del contraddittorio nella formazione della prova significa:", opts: ["A) Ogni parte può produrre qualsiasi documento","B) La prova si forma in dibattimento con la partecipazione di accusa e difesa","C) Il giudice non può acquisire prove d'ufficio","D) L'imputato deve sempre essere presente al dibattimento"], c: 1, e: "Il contraddittorio nella formazione della prova (art. 111 co. 4 Cost.) implica che la prova, per avere piena efficacia, debba formarsi davanti al giudice nel dibattimento, con la partecipazione dell'accusa e della difesa." },
+    { q: "L'art. 13 Cost. tutela:", opts: ["A) La libertà di espressione","B) La libertà personale, inviolabile","C) La libertà di associazione","D) Il diritto al lavoro"], c: 1, e: "L'art. 13 Cost. tutela la libertà personale, definendola inviolabile. Ogni restrizione della libertà personale deve essere disposta dall'autorità giudiziaria con atto motivato e nei soli casi e modi previsti dalla legge." },
+    { q: "La riserva di legge in materia penale (art. 25 co. 2 Cost.) comporta:", opts: ["A) Solo il Parlamento può prevedere reati e pene","B) Anche i decreti ministeriali possono prevedere reati","C) Il giudice può creare reati per analogia","D) La legge penale ha effetto retroattivo"], c: 0, e: "L'art. 25 co. 2 Cost. sancisce che nessuno può essere punito se non in forza di una legge entrata in vigore prima del fatto commesso (riserva di legge + irretroattività della legge penale sfavorevole)." },
+    { q: "Il principio del 'giudice naturale precostituito per legge' (art. 25 co. 1 Cost.) implica:", opts: ["A) Il giudice è scelto dall'imputato","B) La competenza del giudice deve essere stabilita dalla legge prima del fatto e non può essere modificata ad personam","C) Ogni reato ha un giudice specializzato dedicato","D) Il giudice deve risiedere nel luogo del reato"], c: 1, e: "Art. 25 co. 1 Cost.: nessuno può essere distolto dal giudice naturale precostituito per legge. Ciò impedisce la creazione di giudici speciali ad hoc e garantisce la predeterminazione per legge delle regole di competenza." },
+    { q: "La durata ragionevole del processo (art. 111 co. 2 Cost.) ha trovato attuazione nella:", opts: ["A) Legge Cartabia","B) Legge Pinto (l. 89/2001) per il risarcimento in caso di durata irragionevole","C) Riforma del codice penale del 1989","D) Legge Orlando del 2017"], c: 1, e: "La Legge Pinto (l. 89/2001) ha introdotto un rimedio indennitario per chi ha subito la violazione del diritto alla ragionevole durata del processo, in attuazione dell'art. 6 CEDU oltre che dell'art. 111 Cost." },
+    { q: "La finalità rieducativa della pena (art. 27 co. 3 Cost.) influenza il processo penale nel senso che:", opts: ["A) Non ha effetti processuali","B) Impone al giudice di modulare la pena tenendo conto anche della possibilità di reinserimento del condannato","C) Elimina la pena detentiva","D) Consente solo pene pecuniarie"], c: 1, e: "L'art. 27 co. 3 Cost. stabilisce che le pene devono tendere alla rieducazione del condannato. Questo influenza sia la commisurazione della pena in sentenza sia l'esecuzione penale (misure alternative, permessi, ecc.)." },
+  ]
+},
+
+misure_precautelari: {
+  label: "Misure Precautelari", icon: "🚨",
+  questions: [
+    { q: "Le misure precautelari nel codice di procedura penale sono:", opts: ["A) Arresto in flagranza e fermo di indiziato di delitto","B) Custodia cautelare e arresti domiciliari","C) Obbligo di dimora e divieto di espatrio","D) Sequestro conservativo e sequestro preventivo"], c: 0, e: "Le misure precautelari (artt. 380-391 c.p.p.) sono l'arresto in flagranza (obbligatorio e facoltativo) e il fermo di indiziato di delitto. Si distinguono dalle misure cautelari perché sono provvisorie e richiedono convalida." },
+    { q: "L'arresto obbligatorio in flagranza (art. 380 c.p.p.) riguarda:", opts: ["A) Qualsiasi reato","B) Delitti non colposi con pena massima superiore a 3 anni","C) Reati specificamente indicati dalla legge, tra cui delitti gravi come omicidio, rapina, associazione mafiosa","D) Solo i reati di cui all'art. 407 co. 2 c.p.p."], c: 2, e: "L'art. 380 c.p.p. elenca tassativamente i reati per i quali la PG deve procedere all'arresto: delitti non colposi consumati o tentati per cui la legge prevede pena ergastolo o reclusione non inferiore nel minimo a 5 anni e nel massimo a 20, e specifici reati." },
+    { q: "Il fermo di indiziato di delitto presuppone:", opts: ["A) La flagranza di reato","B) Gravi indizi di colpevolezza per delitti con pena superiore a 2 anni e pericolo di fuga","C) Mandato del GIP","D) Confessione dell'indagato"], c: 1, e: "Il fermo (art. 384 c.p.p.) richiede: gravi indizi di commissione di delitti per cui la pena è superiore a 2 anni; specifico pericolo di fuga; situazione di urgenza che non consente di attendere il provvedimento del GIP." },
+    { q: "Entro quanto tempo dalla privazione della libertà l'arrestato/fermato deve essere portato davanti al GIP per la convalida?", opts: ["A) 24 ore","B) 48 ore","C) 96 ore","D) 5 giorni"], c: 2, e: "L'art. 449 c.p.p. prevede che l'arrestato/fermato sia messo a disposizione del GIP entro 24 ore dall'arresto; il GIP deve procedere all'udienza di convalida entro le successive 48 ore (totale 96 ore dalla privazione della libertà ex art. 13 Cost.)." },
+    { q: "Il GIP, nell'udienza di convalida, può:", opts: ["A) Solo convalidare o non convalidare l'arresto","B) Convalidare l'arresto e applicare una misura cautelare, oppure non convalidare e rimettere in libertà l'interessato","C) Ordinare la scarcerazione immediata solo se il reato è lieve","D) Disporre il rinvio a giudizio immediato"], c: 1, e: "All'udienza di convalida (art. 391 c.p.p.) il GIP: valida o non convalida la misura precautelare; può contestualmente applicare una misura cautelare se ne ricorrono i presupposti; in caso contrario, ordina la rimessa in libertà." },
+    { q: "Chi può procedere al fermo di indiziato di delitto?", opts: ["A) Solo la PG","B) La PG e, in via autonoma, il PM","C) Solo il PM","D) Solo il GIP su richiesta del PM"], c: 1, e: "Il fermo può essere disposto dal PM (art. 384 c.p.p.) o dalla PG di propria iniziativa in casi di urgenza (art. 384 co. 2 c.p.p.), con comunicazione immediata al PM." },
+    { q: "Il quasi-flagranza (art. 382 c.p.p.) si verifica quando:", opts: ["A) Il reato è stato commesso qualche giorno prima","B) Il soggetto è sorpreso subito dopo il reato con tracce o strumenti del reato o inseguito dalla PG o dalla vittima","C) Ci sono solo testimonianze del reato","D) Il soggetto confessa dopo l'interrogatorio"], c: 1, e: "La quasi-flagranza (art. 382 c.p.p.) equipara alla flagranza il caso in cui il soggetto sia inseguito immediatamente dopo il reato, o sia sorpreso con tracce, armi o strumenti del reato." },
+    { q: "L'arresto facoltativo in flagranza (art. 381 c.p.p.) riguarda:", opts: ["A) Qualsiasi delitto","B) Delitti non colposi con pena massima superiore a 3 anni e, con discrezionalità della PG, alcuni reati minori","C) Solo i delitti tentati","D) I reati contravvenzionali"], c: 1, e: "L'art. 381 c.p.p. consente (ma non obbliga) la PG ad arrestare chi è colto in flagranza di delitti non colposi con pena massima superiore a 3 anni, nonché per specifici reati minori indicati dalla norma." },
+    { q: "Cosa accade se il GIP non convalida il fermo o l'arresto?", opts: ["A) L'indagato resta detenuto fino al rinvio a giudizio","B) L'indagato è immediatamente rimesso in libertà, salvo applicazione di misura cautelare","C) Il PM può disporre nuovo arresto","D) L'indagato è rilasciato solo dopo 24 ore"], c: 1, e: "La mancata convalida comporta l'immediata rimessa in libertà dell'arrestato/fermato. Il GIP può però applicare contestualmente una misura cautelare, se ne ricorrono i presupposti autonomi." },
+    { q: "In quale caso non può procedersi ad arresto in flagranza?", opts: ["A) Se l'indagato è straniero","B) Se il fatto risulta commesso in presenza di una causa di non punibilità (es. legittima difesa)","C) Se l'indagato ha più di 70 anni","D) Se il reato è stato commesso di notte"], c: 1, e: "L'art. 385 c.p.p. stabilisce che non si può procedere ad arresto quando appare che il fatto sia stato commesso in presenza di una causa di giustificazione o di non punibilità." },
+  ]
+},
+
+misure_cautelari: {
+  label: "Misure Cautelari", icon: "⛓️",
+  questions: [
+    { q: "Le misure cautelari personali si distinguono in:", opts: ["A) Arresto e fermo","B) Misure coercitive e misure interdittive","C) Misure provvisorie e definitive","D) Misure obbligatorie e facoltative"], c: 1, e: "Le misure cautelari personali (artt. 272-315 c.p.p.) si dividono in coercitive (limitano la libertà fisica: custodia cautelare, arresti domiciliari, obbligo/divieto di dimora ecc.) e interdittive (limitano lo svolgimento di attività: sospensione da pubblico ufficio, ecc.)." },
+    { q: "I presupposti generali ('fumus' e 'periculum') per l'applicazione di una misura cautelare sono:", opts: ["A) Prove sufficienti e necessità investigativa","B) Gravi indizi di colpevolezza (fumus) e uno dei pericoli ex art. 274 c.p.p. (periculum)","C) Testimonianze oculari e confessione","D) Solo la gravità del reato"], c: 1, e: "L'art. 273 c.p.p. richiede la presenza di gravi indizi di colpevolezza ('fumus delicti'). L'art. 274 c.p.p. richiede uno dei tre pericoli: fuga, inquinamento probatorio, reiterazione del reato ('periculum libertatis')." },
+    { q: "Il principio di proporzionalità nelle misure cautelari implica:", opts: ["A) La misura deve essere proporzionata alla gravità del reato e alla pena prevista","B) Le misure cautelari durano in proporzione alla pena finale","C) Proporzionalità rispetto al numero di indagati","D) Non esiste questo principio per le misure cautelari"], c: 0, e: "Il principio di proporzionalità (art. 275 co. 1 c.p.p.) impone che le misure cautelari siano proporzionate alla gravità del fatto e alla sanzione che si ritiene possa essere irrogata; si applica anche il principio di adeguatezza." },
+    { q: "La custodia cautelare in carcere è applicabile solo:", opts: ["A) Per qualsiasi reato","B) Quando le altre misure sono inadeguate; vi sono limiti di pena edittale (max non inferiore a 4 anni)","C) Solo per i recidivi","D) Sempre in caso di arresto in flagranza"], c: 1, e: "La custodia cautelare in carcere (art. 285 c.p.p.) è misura extrema ratio: si applica solo quando ogni altra misura risulti inadeguata. Richiede pena massima non inferiore a 4 anni (art. 280 c.p.p.)." },
+    { q: "I termini di fase della custodia cautelare:", opts: ["A) Decorrono dall'emissione del titolo","B) Sono termini massimi di durata della custodia nelle singole fasi (indagini, giudizio di primo grado, appello, Cassazione)","C) Non sono previsti dalla legge","D) Decorrono dalla sentenza di condanna"], c: 1, e: "Gli artt. 303-304 c.p.p. prevedono termini di fase entro i quali la custodia cautelare deve cessare, a pena di scarcerazione automatica. I termini variano per gravità del reato e fase processuale." },
+    { q: "Che cosa è la 'scarcerazione per decorrenza dei termini'?", opts: ["A) Un istituto abrogato","B) La rimessione in libertà automatica quando i termini massimi di custodia cautelare sono scaduti senza sentenza definitiva","C) Un provvedimento discrezionale del GIP","D) L'esito dell'udienza di convalida"], c: 1, e: "Quando i termini massimi di custodia cautelare (fissati dagli artt. 303-304 c.p.p.) scadono senza che sia intervenuta sentenza definitiva, l'indagato/imputato è rimesso in libertà automaticamente, anche se la misura era ancora necessaria." },
+    { q: "Contro un'ordinanza di custodia cautelare, l'indagato può proporre:", opts: ["A) Solo appello alla Corte d'Appello","B) Riesame entro 10 giorni davanti al Tribunale del Riesame, o appello","C) Opposizione davanti allo stesso GIP","D) Ricorso diretto in Cassazione entro 5 giorni"], c: 1, e: "L'indagato può proporre riesame (art. 309 c.p.p.) entro 10 giorni al Tribunale del Riesame (Tribunale della Libertà), che decide entro 10 giorni dalla ricezione degli atti. In alternativa può proporre appello ex art. 310 c.p.p." },
+    { q: "La revoca della misura cautelare è disposta quando:", opts: ["A) L'imputato chiede di essere scarcerato","B) Vengono meno le condizioni che la giustificavano (art. 299 c.p.p.)","C) Il reato si prescrive","D) La vittima ritira la querela"], c: 1, e: "L'art. 299 c.p.p. prevede che il giudice revochi la misura cautelare se vengono meno le condizioni di applicabilità; la sostituisce con una meno grave se le esigenze cautelari si sono attenuate." },
+    { q: "Le misure cautelari reali sono:", opts: ["A) Custodia cautelare e arresti domiciliari","B) Sequestro conservativo e sequestro preventivo","C) Divieto di espatrio e obbligo di presentazione alla PG","D) Confisca e sanzione amministrativa"], c: 1, e: "Le misure cautelari reali incidono sul patrimonio: il sequestro conservativo (art. 316 c.p.p.) garantisce il credito dello Stato o della parte civile; il sequestro preventivo (art. 321 c.p.p.) impedisce l'uso del bene per commettere reati." },
+    { q: "Il 'pericolo di reiterazione del reato' come esigenza cautelare (art. 274 lett. c) richiede:", opts: ["A) Che l'imputato sia recidivo","B) Concreto e attuale pericolo di commissione di gravi delitti della stessa specie","C) Qualsiasi rischio di nuovi reati","D) La sola gravità del reato contestato"], c: 1, e: "Il pericolo di reiterazione (art. 274 lett. c c.p.p.) richiede che vi sia concreto e attuale pericolo che l'imputato commetta gravi delitti della stessa specie di quello per cui si procede. Non è sufficiente un generico rischio." },
+  ]
+},
+
+condizioni_procedibilita: {
+  label: "Querela, Istanza, Condizioni di Procedibilità", icon: "📮",
+  questions: [
+    { q: "La querela è:", opts: ["A) Una misura precautelare","B) Una condizione di procedibilità che deve provenire dalla persona offesa","C) Un atto del PM per avviare le indagini","D) Sinonimo di denuncia"], c: 1, e: "La querela (art. 336 c.p.p.) è la dichiarazione con cui la persona offesa manifesta la volontà che si proceda per il reato subito. È condizione di procedibilità per i reati procedibili a querela, senza la quale il processo non può iniziare." },
+    { q: "Il termine ordinario per proporre querela è:", opts: ["A) 1 mese dal fatto","B) 3 mesi dalla conoscenza del fatto","C) 6 mesi dalla commissione del reato","D) 1 anno dal danno"], c: 1, e: "L'art. 124 c.p. prevede un termine di 3 mesi dalla conoscenza del fatto per proporre querela, salvo che la legge preveda un termine diverso (es. 6 mesi per violenza sessuale ex art. 609-septies c.p.)." },
+    { q: "La remissione della querela:", opts: ["A) Non è mai possibile","B) Estingue il reato se accettata dall'imputato, prima della sentenza definitiva","C) Vale solo se presentata davanti al GIP","D) Ha effetti solo sui reati contravvenzionali"], c: 1, e: "La remissione della querela (art. 340 c.p.p.) estingue il reato se il querelato accetta. Prima della riforma Cartabia era possibile fino alla dichiarazione di apertura del dibattimento; la riforma ha esteso la possibilità." },
+    { q: "L'istanza come condizione di procedibilità si differenzia dalla querela perché:", opts: ["A) Non ha differenze sostanziali","B) L'istanza è presentata dalla persona offesa per reati commessi all'estero da stranieri; la querela per reati commessi in Italia","C) L'istanza proviene dal PM","D) L'istanza vale per reati contravvenzionali"], c: 1, e: "L'istanza (art. 341 c.p.p.) è richiesta dalla persona offesa per la persecuzione di reati commessi all'estero da stranieri (art. 10 c.p.) o in altri casi specifici previsti dalla legge." },
+    { q: "Per i reati procedibili d'ufficio:", opts: ["A) Occorre comunque la querela della vittima","B) Il PM ha l'obbligo di esercitare l'azione penale senza necessità di atti della persona offesa","C) L'azione penale è discrezionale","D) Solo la PG può avviare le indagini"], c: 1, e: "Per i reati procedibili d'ufficio (la grande maggioranza) il PM è obbligato ad esercitare l'azione penale (art. 112 Cost.) non appena acquisisce la notizia di reato, indipendentemente dalla volontà della vittima." },
+    { q: "La querela può essere presentata:", opts: ["A) Solo al PM","B) Alla PG, al PM o all'autorità consolare all'estero","C) Solo al GIP","D) Solo in forma scritta davanti al notaio"], c: 1, e: "La querela (art. 336 c.p.p.) può essere presentata oralmente o per iscritto all'ufficiale o agente di PG, al PM o all'autorità consolare se il fatto è commesso all'estero. Va annotata in forma scritta se presentata oralmente." },
+    { q: "La c.d. 'querela di parte' per reati di lesioni personali lievissime:", opts: ["A) Non esiste","B) È richiesta per le lesioni personali guarite entro 20 giorni non commesse con armi","C) Vale solo per lesioni colpose","D) È sempre necessaria per qualsiasi lesione"], c: 1, e: "Per le lesioni personali lievi (art. 582 c.p.), salvo aggravanti, si procede a querela della persona offesa quando la malattia ha una durata non superiore a 20 giorni. Per lesioni più gravi si procede d'ufficio." },
+    { q: "La richiesta del Ministro della Giustizia come condizione di procedibilità è prevista per:", opts: ["A) Tutti i reati","B) Alcuni reati commessi all'estero da cittadini italiani o stranieri","C) I reati di terrorismo","D) I reati di corruzione"], c: 1, e: "La richiesta del Ministro (art. 342 c.p.p.) è condizione di procedibilità per specifici reati commessi all'estero (artt. 7-10 c.p.), in cui l'interesse dello Stato a procedere è rimesso a una valutazione politica." },
+    { q: "Se manca una condizione di procedibilità, il giudice:", opts: ["A) Rinvia il processo fino a quando non viene presentata","B) Dichiara il non luogo a procedere o pronuncia sentenza di non doversi procedere","C) Ordina al PM di acquisire la condizione mancante","D) Condanna comunque l'imputato"], c: 1, e: "La mancanza di una condizione di procedibilità (querela, istanza, autorizzazione ecc.) comporta la pronuncia di sentenza di non doversi procedere (in dibattimento) o di non luogo a procedere (all'udienza preliminare), ex art. 529 c.p.p." },
+    { q: "La querela condizionata (subordinata al risarcimento del danno):", opts: ["A) È pienamente valida","B) Non è ammessa: la querela non può essere soggetta a condizione","C) È ammessa solo per reati patrimoniali","D) Deve essere autorizzata dal GIP"], c: 1, e: "La querela è un atto di volontà processuale che non può essere sottoposto a condizione (art. 337 c.p.p.). Una querela condizionata al risarcimento è nulla. Il querelante può però ritirare successivamente la querela (remissione)." },
+  ]
+},
+
+investigazioni_difensive: {
+  label: "Investigazioni Difensive", icon: "🛡️",
+  questions: [
+    { q: "Le investigazioni difensive sono disciplinate principalmente da:", opts: ["A) Art. 327-bis c.p.p. e artt. 391-bis ss. c.p.p.","B) Art. 362 c.p.p.","C) Art. 415-bis c.p.p.","D) L. 397/2000 unicamente"], c: 0, e: "Le investigazioni difensive sono disciplinate dall'art. 327-bis c.p.p. (norma-base) e dagli artt. 391-bis ss. c.p.p. (modalità di svolgimento), introdotti dalla l. 7 dicembre 2000 n. 397." },
+    { q: "Chi può svolgere investigazioni difensive?", opts: ["A) Solo il difensore dell'imputato","B) Il difensore, i suoi sostituti, gli investigatori privati autorizzati e i consulenti tecnici","C) Solo la persona offesa","D) Il GIP su richiesta della difesa"], c: 1, e: "Le investigazioni difensive possono essere svolte dal difensore e dai suoi sostituti (art. 327-bis c.p.p.), dagli investigatori privati autorizzati (art. 222 disp. att. c.p.p.) e dai consulenti tecnici nominati dalla difesa." },
+    { q: "Le dichiarazioni spontanee raccolte dalla difesa (art. 391-bis c.p.p.) richiedono:", opts: ["A) Autorizzazione del PM","B) La presenza obbligatoria del PM","C) Avvertimenti formali alla persona sentita circa la facoltà di non rispondere e l'uso delle dichiarazioni","D) La forma dell'atto pubblico notarile"], c: 2, e: "L'art. 391-bis c.p.p. impone che prima di assumere informazioni il difensore avverta la persona: della propria qualità; dello scopo dell'attività; della facoltà di non rispondere; e che le dichiarazioni potranno essere usate." },
+    { q: "Le informazioni difensive possono essere assunte:", opts: ["A) Solo prima dell'esercizio dell'azione penale","B) In ogni stato e grado del procedimento, anche prima della notizia di reato","C) Solo in dibattimento","D) Solo dopo il rinvio a giudizio"], c: 1, e: "L'art. 327-bis co. 1 c.p.p. prevede che le investigazioni difensive possano essere svolte in ogni stato e grado del procedimento, e anche nella fase antecedente all'esercizio dell'azione penale, per verificare i presupposti per la difesa." },
+    { q: "Il difensore può chiedere l'accesso ai luoghi privati per le investigazioni?", opts: ["A) Sì, sempre e senza formalità","B) Sì, ma può essere necessaria l'autorizzazione del GIP in caso di diniego del titolare","C) No, l'accesso ai luoghi privati è riservato alla PG","D) Solo con il consenso del PM"], c: 1, e: "L'art. 391-septies c.p.p. prevede che il difensore possa accedere ai luoghi privati, ma in caso di diniego del titolare deve chiedere l'autorizzazione al GIP, che decide con decreto motivato." },
+    { q: "Il fascicolo delle investigazioni difensive:", opts: ["A) Viene depositato automaticamente nel fascicolo del PM","B) Viene depositato dalla difesa nella segreteria del PM, che ne prende atto","C) È conservato dalla difesa e può essere depositato per inserirlo nel fascicolo del dibattimento","D) Non ha alcun valore probatorio"], c: 2, e: "I risultati delle investigazioni difensive sono conservati nel fascicolo del difensore. Possono essere depositati alla segreteria del PM (art. 391-octies c.p.p.) o prodotti direttamente in giudizio come prove a discarico." },
+    { q: "Cosa avviene se il difensore interroga una persona senza avvertirla dei propri diritti (omissione degli avvisi ex art. 391-bis)?", opts: ["A) Le dichiarazioni sono comunque valide","B) Le dichiarazioni sono inutilizzabili","C) Il difensore è espulso dal procedimento","D) La dichiarazione deve essere confermata dal PM"], c: 1, e: "L'omissione degli avvisi ex art. 391-bis c.p.p. comporta l'inutilizzabilità delle dichiarazioni raccolte (art. 391-bis co. 6 c.p.p.)." },
+    { q: "Il difensore può interrogare persone che si trovano in stato di detenzione?", opts: ["A) No, mai","B) Sì, ma con autorizzazione del giudice che procede","C) Sì, liberamente","D) Solo con il consenso del PM"], c: 1, e: "L'art. 391-bis co. 9 c.p.p. prevede che per sentire persone detenute il difensore debba ottenere l'autorizzazione dell'autorità giudiziaria competente (GIP o giudice del procedimento)." },
+    { q: "La persona informata sui fatti può rifiutarsi di rispondere alle domande del difensore?", opts: ["A) No, è obbligata a rispondere","B) Sì, ha la facoltà di non rispondere","C) Solo se è la persona offesa","D) Solo se è indagata in un altro procedimento"], c: 1, e: "A differenza della testimonianza in dibattimento, la persona che il difensore vuole sentire nelle investigazioni difensive non è obbligata a rispondere. Ha la facoltà di non rispondere o di non rilasciare dichiarazioni." },
+    { q: "Le investigazioni difensive anticipate (prima della notizia di reato) hanno lo scopo di:", opts: ["A) Prevenire la commissione di reati","B) Raccogliere elementi a discarico o per valutare se vi sono presupposti per presentare una denuncia nell'interesse del cliente","C) Sostituire l'attività della PG","D) Intercettare le comunicazioni del futuro indagato"], c: 1, e: "Le investigazioni preventive (art. 391-nonies c.p.p.) consentono al difensore di raccogliere elementi di prova in via anticipata, per tutelare il futuro cliente che rischia di essere coinvolto in un procedimento penale." },
+  ]
+},
+
+archiviazione: {
+  label: "Archiviazione", icon: "🗄️",
+  questions: [
+    { q: "La richiesta di archiviazione può essere presentata dal PM quando:", opts: ["A) L'indagato non è trovato","B) La notizia di reato è infondata, il reato è estinto, il fatto non è previsto dalla legge come reato, o mancano le condizioni di procedibilità","C) L'indagine dura da troppo tempo","D) La persona offesa non si è costituita parte civile"], c: 1, e: "Il PM chiede l'archiviazione (art. 408 c.p.p.) quando la notizia di reato è infondata, il fatto non costituisce reato, il reato è estinto, mancano le condizioni di procedibilità, o l'autore è rimasto ignoto." },
+    { q: "A chi il PM deve presentare la richiesta di archiviazione?", opts: ["A) Al GUP","B) Al GIP","C) Al Procuratore Generale","D) Al Tribunale del Riesame"], c: 1, e: "La richiesta di archiviazione (art. 408 c.p.p.) è presentata al GIP, che decide con decreto o, nei casi previsti, fissa l'udienza camerale." },
+    { q: "Entro quanto tempo la persona offesa può fare opposizione alla richiesta di archiviazione?", opts: ["A) 10 giorni","B) 20 giorni","C) 30 giorni","D) 60 giorni"], c: 1, e: "La persona offesa che nella denuncia/querela abbia dichiarato di voler essere informata dispone di 20 giorni dalla notifica della richiesta di archiviazione per presentare opposizione (art. 410 c.p.p.)." },
+    { q: "Cosa può fare il GIP se non è d'accordo con la richiesta di archiviazione?", opts: ["A) Decidere autonomamente di esercitare l'azione penale","B) Indicare al PM ulteriori indagini da compiere o, in caso di contrasto, trasmettere al Procuratore Generale","C) Archiviare comunque","D) Nominare un difensore d'ufficio per l'indagato"], c: 1, e: "Il GIP può: accogliere la richiesta; indicare al PM ulteriori indagini (art. 409 co. 4 c.p.p.); in caso di contrasto con il PM (che insiste nell'archiviazione), trasmettere al Procuratore Generale per l'avocazione o l'imputazione coatta." },
+    { q: "L'archiviazione ha carattere definitivo?", opts: ["A) Sì, è irreversibile","B) No, la riapertura delle indagini è possibile con autorizzazione del GIP in presenza di nuove fonti di prova","C) È definitiva solo per i reati bagatellari","D) Dipende dalla volontà della persona offesa"], c: 1, e: "L'archiviazione non ha carattere definitivo di giudicato: il PM può richiedere la riapertura delle indagini (art. 414 c.p.p.) in presenza di nuove fonti di prova, previa autorizzazione del GIP." },
+    { q: "Cosa è la c.d. 'imputazione coatta'?", opts: ["A) L'imputazione dell'indagato senza il suo consenso","B) Il provvedimento con cui il GIP, rigettando la richiesta di archiviazione, ordina al PM di formulare l'imputazione","C) L'arresto coattivo dell'indagato","D) La coercizione della persona offesa a presentare querela"], c: 1, e: "L'imputazione coatta (art. 409 co. 5 c.p.p.) è l'ordine del GIP al PM di formulare l'imputazione quando il GIP rigetta la richiesta di archiviazione e il PM non concorda. È un'eccezione al principio di obbligatorietà dell'azione penale." },
+    { q: "L'opposizione della persona offesa alla richiesta di archiviazione deve contenere:", opts: ["A) Solo la firma della persona offesa","B) L'indicazione dell'oggetto dell'investigazione suppletiva e dei relativi elementi di prova","C) Il nome dei testimoni a discarico dell'indagato","D) Una perizia medico-legale"], c: 1, e: "L'opposizione (art. 410 c.p.p.) deve essere motivata: deve indicare l'oggetto della investigazione suppletiva e i relativi elementi di prova che il PM avrebbe dovuto raccogliere, pena l'inammissibilità." },
+    { q: "Quando il GIP dispone l'archiviazione senza udienza camerale?", opts: ["A) Sempre, per accelerare il procedimento","B) Quando la richiesta riguarda persona non identificata (ignoti) e non vi è opposizione","C) Solo per i reati meno gravi","D) Su richiesta del PM"], c: 1, e: "Per le archiviazioni per ignoti e in assenza di opposizione della persona offesa, il GIP può emettere decreto di archiviazione de plano (senza udienza), ai sensi dell'art. 408 co. 3-bis c.p.p." },
+    { q: "La persona offesa non avvisata della richiesta di archiviazione può:", opts: ["A) Non fare nulla, salvo ricorrere in appello","B) Proporre opposizione anche tardiva, se dimostra di non aver ricevuto la comunicazione","C) Richiedere la riapertura delle indagini al PM","D) Presentare direttamente denuncia alla PG"], c: 1, e: "Se la persona offesa non è stata avvisata (in violazione degli obblighi di legge), può far valere la nullità della procedura di archiviazione e proporre opposizione anche in ritardo, dimostrando la mancata comunicazione." },
+    { q: "Con quale atto il GIP accoglie la richiesta di archiviazione?", opts: ["A) Sentenza","B) Decreto motivato di archiviazione","C) Ordinanza","D) Verbale di udienza"], c: 1, e: "Il GIP accoglie la richiesta di archiviazione con decreto motivato (art. 409 co. 1 c.p.p.), che non ha valore di cosa giudicata ma chiude formalmente la fase delle indagini preliminari." },
+  ]
+},
+
+azione_penale: {
+  label: "Azione Penale", icon: "⚡",
+  questions: [
+    { q: "L'esercizio dell'azione penale avviene mediante:", opts: ["A) L'iscrizione nel registro delle notizie di reato","B) La richiesta di rinvio a giudizio, la citazione diretta o il decreto penale di condanna","C) L'emissione di misura cautelare","D) La denuncia della persona offesa"], c: 1, e: "L'azione penale viene esercitata con la richiesta di rinvio a giudizio (art. 416 c.p.p.) davanti al GUP, con citazione diretta a giudizio (art. 550 c.p.p.) per reati meno gravi, o con richiesta di decreto penale di condanna (art. 459 c.p.p.)." },
+    { q: "Il principio di obbligatorietà dell'azione penale (art. 112 Cost.) implica che:", opts: ["A) Il PM ha facoltà di scegliere se agire penalmente","B) Il PM ha l'obbligo di esercitare l'azione penale ogni volta che emerge una notizia di reato fondata","C) Il GIP può ordinare al PM di non procedere","D) La vittima può costringere il PM ad agire"], c: 1, e: "Il PM non può astenersi dall'esercitare l'azione penale in presenza di elementi sufficienti: l'art. 112 Cost. esclude qualsiasi discrezionalità nell'esercizio dell'azione. L'alternativa è solo la richiesta di archiviazione." },
+    { q: "Cosa contiene la richiesta di rinvio a giudizio (art. 417 c.p.p.)?", opts: ["A) Solo il nome dell'imputato","B) L'imputazione, le generalità dell'imputato, l'indicazione del giudice competente e la lista dei testi","C) La sentenza di condanna","D) Le misure cautelari proposte dal PM"], c: 1, e: "La richiesta di rinvio a giudizio contiene: l'imputazione (enunciazione del fatto con indicazione delle norme violate), le generalità dell'imputato, il giudice competente, la lista testi/periti/consulenti del PM." },
+    { q: "La citazione diretta a giudizio (art. 550 c.p.p.) si applica per:", opts: ["A) Tutti i reati","B) Reati per cui si procede con citazione diretta, senza udienza preliminare, perché meno gravi","C) Solo i reati di competenza del giudice di pace","D) Solo per i recidivi"], c: 1, e: "La citazione diretta (art. 550 c.p.p.) si applica per i reati previsti dall'art. 550 co. 1 c.p.p. (es. reati puniti con pena detentiva non superiore nel massimo a 4 anni, o con pena pecuniaria). Elimina l'udienza preliminare." },
+    { q: "Cosa è il decreto penale di condanna?", opts: ["A) Una sentenza emessa senza udienza per reati bagatellari su richiesta del PM","B) Un atto della PG per reati flagranti","C) L'opposto della richiesta di archiviazione","D) Un provvedimento del Ministro della Giustizia"], c: 0, e: "Il decreto penale di condanna (art. 459 c.p.p.) è emesso dal GIP su richiesta del PM per reati punibili con sola pena pecuniaria o con pena detentiva sostituibile, senza udienza, con riduzione della pena fino alla metà." },
+    { q: "L'imputato che riceve un decreto penale di condanna può:", opts: ["A) Solo accettarlo o fare appello","B) Fare opposizione entro 15 giorni e scegliere un rito alternativo o il giudizio ordinario","C) Chiedere la revisione","D) Impugnare solo in Cassazione"], c: 1, e: "L'imputato può proporre opposizione al decreto penale entro 15 giorni dalla notifica (art. 461 c.p.p.), richiedendo il giudizio dibattimentale ordinario o un rito alternativo (abbreviato, patteggiamento, oblazione)." },
+    { q: "Quando il PM può chiedere il giudizio immediato?", opts: ["A) Sempre, a sua scelta","B) Quando l'indagato è stato interrogato o è rimasto assente senza giustificazione, e sussistono prove evidenti","C) Solo per reati di mafia","D) Su richiesta della persona offesa"], c: 1, e: "Il giudizio immediato (art. 453 c.p.p.) richiede: che l'indagato sia stato interrogato o abbia rinunciato all'interrogatorio; che la prova sia evidente; e che si proceda entro 90 giorni dall'iscrizione della notizia di reato." },
+    { q: "L'azione penale, una volta esercitata, può essere ritirata dal PM?", opts: ["A) Sì, in qualsiasi momento","B) No, l'azione penale è irreversibile salvo i casi di rinuncia all'impugnazione","C) Solo con il consenso dell'imputato","D) Solo prima del rinvio a giudizio"], c: 1, e: "L'azione penale è irreversibile: una volta esercitata, il PM non può ritrarsi. Può però rinunciare a specifici mezzi di impugnazione o formulare conclusioni assolutorie in dibattimento, ma ciò non equivale a ritiro dell'azione." },
+    { q: "Cosa è la 'discovery' pre-dibattimentale (art. 415-bis c.p.p.)?", opts: ["A) L'accesso agli atti del GIP","B) L'avviso all'indagato della conclusione delle indagini, con facoltà di prendere visione degli atti e di depositare memorie o chiedere di essere interrogato","C) La notifica dell'imputazione all'indagato","D) L'invio degli atti al Procuratore Generale"], c: 1, e: "L'avviso ex art. 415-bis c.p.p. è la fase di 'discovery': prima di esercitare l'azione penale, il PM deve avvisare l'indagato della conclusione delle indagini, permettendogli di consultare gli atti e di esercitare diritti difensivi." },
+    { q: "Quale giudice è competente per l'udienza preliminare?", opts: ["A) Il GIP","B) Il GUP (Giudice dell'Udienza Preliminare)","C) Il Tribunale monocratico","D) La Corte d'Assise"], c: 1, e: "L'udienza preliminare si svolge davanti al GUP (art. 416 c.p.p.), che è un giudice distinto dal GIP. Il GUP decide se rinviare a giudizio o emettere sentenza di non luogo a procedere." },
+  ]
+},
+
+opposizioni: {
+  label: "Opposizioni", icon: "✋",
+  questions: [
+    { q: "L'opposizione al decreto penale di condanna deve essere proposta entro:", opts: ["A) 5 giorni","B) 15 giorni dalla notificazione del decreto","C) 30 giorni","D) 60 giorni"], c: 1, e: "L'art. 461 c.p.p. prevede il termine di 15 giorni dalla notificazione del decreto penale di condanna per proporre opposizione. Il termine è perentorio." },
+    { q: "L'opposizione al decreto penale di condanna può contenere la richiesta di:", opts: ["A) Solo il giudizio ordinario","B) Giudizio abbreviato, patteggiamento, oblazione o giudizio ordinario","C) Solo l'assoluzione immediata","D) Scarcerazione immediata"], c: 1, e: "Con l'opposizione (art. 461 c.p.p.) l'imputato può chiedere: il giudizio abbreviato, il patteggiamento, la sospensione del procedimento con messa alla prova, l'oblazione (se ammessa), oppure il giudizio dibattimentale ordinario." },
+    { q: "Cosa avviene se l'opposizione al decreto penale è dichiarata inammissibile?", opts: ["A) Il processo si estingue","B) Il decreto penale diventa irrevocabile e si esegue","C) Si tiene ugualmente il dibattimento","D) Il PM può emettere un nuovo decreto"], c: 1, e: "Se l'opposizione è inammissibile (es. per tardività), il decreto penale di condanna diventa irrevocabile (art. 648 c.p.p.) ed è eseguito come una sentenza definitiva." },
+    { q: "L'opposizione alla richiesta di archiviazione (art. 410 c.p.p.) deve essere:", opts: ["A) Presentata in qualsiasi forma","B) Motivata con indicazione dell'oggetto dell'investigazione suppletiva e degli elementi di prova","C) Presentata solo dal difensore","D) Firmata da un notaio"], c: 1, e: "L'opposizione all'archiviazione deve essere motivata a pena di inammissibilità: deve indicare l'oggetto dell'investigazione suppletiva richiesta e i relativi elementi di prova non valutati dal PM." },
+    { q: "Chi può proporre opposizione all'archiviazione?", opts: ["A) Chiunque","B) Solo l'indagato","C) La persona offesa che abbia dichiarato di volervi essere informata","D) Solo il PM"], c: 2, e: "Solo la persona offesa che, nella denuncia o nella querela, abbia dichiarato di voler essere avvisata della richiesta di archiviazione è legittimata a opporsi (art. 410 c.p.p.)." },
+    { q: "L'opposizione al decreto che dispone il giudizio (GUP) è ammissibile?", opts: ["A) Sì, con ricorso alla Corte d'Appello","B) No: il decreto che dispone il giudizio è inoppugnabile e non è soggetto ad opposizione né appello","C) Sì, con riesame davanti al Tribunale","D) Solo se l'imputato era assente all'udienza preliminare"], c: 1, e: "Il decreto che dispone il giudizio (art. 429 c.p.p.) è un atto inoppugnabile: non è possibile né l'appello né il ricorso per cassazione avverso tale atto, salvo vizi procedurali gravi contestabili in dibattimento." },
+    { q: "Il reclamo avverso il rigetto dell'istanza di riesame del sequestro:", opts: ["A) Non è previsto","B) È il ricorso per cassazione per violazione di legge ex art. 325 c.p.p.","C) È l'appello alla Corte d'Assise","D) È il reclamo al Procuratore Generale"], c: 1, e: "Contro i provvedimenti del Tribunale del Riesame sul sequestro è previsto il ricorso per cassazione per violazione di legge (art. 325 c.p.p.), nel termine di 10 giorni dalla comunicazione dell'ordinanza." },
+    { q: "Cosa si intende per opposizione alla sentenza penale di condanna in assenza?", opts: ["A) L'appello ordinario","B) La rescissione del giudicato (art. 629-bis c.p.p.) per chi non abbia potuto partecipare al processo senza sua colpa","C) Il ricorso in Cassazione per vizio procedurale","D) Non è prevista alcuna opposizione"], c: 1, e: "La rescissione del giudicato (art. 629-bis c.p.p., introdotto dalla riforma Orlando e modificato dalla Cartabia) consente all'imputato condannato in assenza, che non abbia avuto effettiva conoscenza del processo, di ottenere la riapertura del processo." },
+    { q: "L'opposizione al decreto di sequestro preventivo:", opts: ["A) Non è prevista","B) Si propone con richiesta di riesame al Tribunale del Riesame entro 10 giorni","C) Si propone con appello alla Corte d'Appello","D) Si propone con ricorso immediato in Cassazione"], c: 1, e: "L'art. 324 c.p.p. prevede la richiesta di riesame del sequestro preventivo, da proporre entro 10 giorni dalla data di esecuzione del provvedimento davanti al Tribunale del Riesame." },
+    { q: "Può l'imputato opporsi all'apertura del dibattimento dopo il decreto che dispone il giudizio?", opts: ["A) Sì, con ricorso in Cassazione","B) No, il decreto è inoppugnabile, ma l'imputato può sollevare questioni preliminari all'inizio del dibattimento","C) Sì, ma solo entro 5 giorni","D) Solo la difesa tecnica può opporsi"], c: 1, e: "Il decreto che dispone il giudizio è inoppugnabile (art. 429 c.p.p.). L'imputato può sollevare questioni preliminari all'apertura del dibattimento (art. 491 c.p.p.) su questioni di competenza, nullità, inutilizzabilità di prove ecc." },
+  ]
+},
+
+riesame_sequestro: {
+  label: "Riesame: Sequestro e Perquisizione", icon: "🔄",
+  questions: [
+    { q: "Il riesame del sequestro preventivo è disciplinato da:", opts: ["A) Art. 309 c.p.p.","B) Art. 324 c.p.p.","C) Art. 318 c.p.p.","D) Art. 253 c.p.p."], c: 1, e: "L'art. 324 c.p.p. disciplina il riesame dei provvedimenti di sequestro preventivo. L'art. 309 c.p.p. riguarda il riesame delle misure cautelari personali. L'art. 318 c.p.p. riguarda il riesame del sequestro probatorio." },
+    { q: "Chi può chiedere il riesame del sequestro preventivo?", opts: ["A) Solo il PM","B) L'imputato, il suo difensore e chiunque abbia interesse","C) Solo il proprietario del bene sequestrato","D) Solo il GIP"], c: 1, e: "L'art. 324 co. 1 c.p.p. legittima a chiedere il riesame del sequestro preventivo l'imputato, il suo difensore e chiunque vi abbia interesse (es. il terzo proprietario del bene)." },
+    { q: "Entro quanto tempo deve essere chiesto il riesame del sequestro?", opts: ["A) 5 giorni dall'esecuzione","B) 10 giorni dalla data di esecuzione del provvedimento o dalla diversa data in cui l'interessato ne abbia avuto conoscenza","C) 20 giorni","D) 30 giorni"], c: 1, e: "Il riesame del sequestro preventivo deve essere richiesto entro 10 giorni dalla data di esecuzione del provvedimento o dalla data in cui l'interessato ne ha avuto conoscenza (art. 324 co. 1 c.p.p.)." },
+    { q: "Il Tribunale del Riesame che si pronuncia sul sequestro deve decidere entro:", opts: ["A) 5 giorni","B) 10 giorni dalla ricezione degli atti","C) 20 giorni","D) 30 giorni"], c: 1, e: "Il Tribunale del Riesame deve pronunciarsi entro 10 giorni dalla ricezione degli atti (art. 324 co. 7 c.p.p.). Il mancato rispetto del termine comporta la perdita di efficacia del sequestro e la restituzione del bene." },
+    { q: "Il collegamento tra perquisizione e sequestro: cosa prevede l'art. 352 c.p.p.?", opts: ["A) La PG può sequestrare solo beni rinvenuti durante una perquisizione autorizzata dal PM","B) La PG può procedere a perquisizione d'iniziativa in caso di flagranza e sequestrare le cose trovate, con convalida del PM","C) Senza decreto del GIP nessun sequestro è valido","D) Il sequestro successivo alla perquisizione è sempre nullo"], c: 1, e: "L'art. 352 c.p.p. consente alla PG di procedere a perquisizione (e conseguente sequestro ex art. 354 c.p.p.) d'iniziativa in caso di flagranza o situazioni d'urgenza, con obbligo di comunicarlo al PM che ne chiede la convalida entro 48 ore." },
+    { q: "Avverso il decreto di sequestro probatorio emesso dal PM, il mezzo di impugnazione è:", opts: ["A) Appello alla Corte d'Appello","B) Riesame ex art. 318 c.p.p. davanti al Tribunale del Riesame","C) Ricorso diretto in Cassazione","D) Opposizione davanti al GIP"], c: 1, e: "L'art. 318 c.p.p. prevede che contro il decreto di sequestro probatorio emesso dal PM si possa proporre riesame davanti al Tribunale del Riesame, entro 10 giorni dalla data di esecuzione del sequestro." },
+    { q: "Se il Tribunale del Riesame non decide entro i termini di legge sul sequestro preventivo:", opts: ["A) Il sequestro rimane in vigore","B) Il sequestro perde efficacia e il bene deve essere restituito","C) Il GIP proroga automaticamente il sequestro","D) Il PM può reiterare la richiesta di sequestro"], c: 1, e: "Il mancato rispetto del termine decadenziale di 10 giorni da parte del Tribunale del Riesame (art. 324 co. 7 c.p.p.) determina la perdita automatica di efficacia del sequestro preventivo e l'obbligo di restituzione del bene." },
+    { q: "Cosa può fare il Tribunale del Riesame in sede di riesame del sequestro?", opts: ["A) Solo confermare o annullare il sequestro","B) Confermare, annullare o riformare il provvedimento impugnato anche per ragioni diverse da quelle indicate nel ricorso","C) Solo sospendere il sequestro fino al giudizio","D) Rinviare al GIP per una nuova decisione"], c: 1, e: "Il Tribunale del Riesame ha poteri cognitivi 'pieni': può confermare, annullare o riformare il provvedimento anche per ragioni diverse da quelle indicate, applicando il principio del 'devolutum' pieno (art. 309 co. 9 c.p.p. in combinato con art. 324 c.p.p.)." },
+    { q: "Avverso il provvedimento del Tribunale del Riesame sul sequestro è possibile:", opts: ["A) Proporre appello alla Corte d'Appello","B) Ricorrere per cassazione per violazione di legge (art. 325 c.p.p.)","C) Chiedere una nuova istanza al Tribunale del Riesame","D) Proporre reclamo al Procuratore Generale"], c: 1, e: "L'art. 325 c.p.p. prevede che contro le ordinanze del Tribunale del Riesame in materia di sequestro sia ammesso il ricorso per cassazione solo per violazione di legge, entro 10 giorni dalla comunicazione." },
+    { q: "Il sequestro operato dalla PG all'esito di una perquisizione richiede, per la convalida, che il PM:", opts: ["A) Presenti ricorso al GIP entro 24 ore","B) Emetta decreto di convalida entro 48 ore, altrimenti il sequestro perde efficacia","C) Chieda autorizzazione preventiva al GIP","D) Notifichi all'indagato entro 48 ore"], c: 1, e: "Il PM deve emettere decreto di convalida del sequestro operato dalla PG entro 48 ore (art. 355 c.p.p.). In mancanza di convalida tempestiva, le cose sequestrate devono essere restituite all'avente diritto." },
+  ]
+}
+
+}; // fine DB
+
+// ============================================================
+// STATO APPLICAZIONE
+// ============================================================
+let currentTopic = null;
+let currentDiff = 'medium';
+let questionPool = [];
+let currentIdx = 0;
+let score = 0;
+let sessionAnswers = []; // {qIdx, selected, correct}
+let topicStats = {}; // { topicId: {attempts, bestScore} }
+
+// ============================================================
+// FUNZIONI UTILITY
+// ============================================================
+function $(id) { return document.getElementById(id); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function setDiff(d) {
+  currentDiff = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function selectQuestions(topicId, diff, n = 10) {
+  const pool = DB[topicId].questions;
+  const shuffled = shuffle(pool);
+  // per difficoltà: easy=prime 6, medium=random 10, hard=ultime 6+random
+  // qui semplifichiamo: random perché le domande sono già miste
+  return shuffled.slice(0, Math.min(n, shuffled.length));
+}
+
+// ============================================================
+// RENDERIZZAZIONE HOME
+// ============================================================
+function renderHome() {
+  const list = $('topicList');
+  list.innerHTML = '';
+  Object.entries(DB).forEach(([id, topic]) => {
+    const s = topicStats[id];
+    const div = document.createElement('div');
+    div.className = 'topic-card';
+    div.onclick = () => startTopic(id);
+    div.innerHTML = `
+      <span class="topic-icon">${topic.icon}</span>
+      <div class="topic-info">
+        <div class="topic-name">${topic.label}</div>
+        ${s ? `<div class="topic-meta">Miglior risultato: ${s.bestScore}/${s.lastTotal} · ${s.attempts} tentativ${s.attempts===1?'o':'i'}</div>` : '<div class="topic-meta">${topic.questions.length} domande disponibili</div>'}
+      </div>
+      <span class="topic-arrow">›</span>`;
+    list.appendChild(div);
+  });
+  showScreen('home');
+}
+
+// fix: replace template literal in non-template
+function renderHomeFixed() {
+  const list = $('topicList');
+  list.innerHTML = '';
+  Object.entries(DB).forEach(([id, topic]) => {
+    const s = topicStats[id];
+    const div = document.createElement('div');
+    div.className = 'topic-card';
+    div.onclick = () => startTopic(id);
+    const meta = s
+      ? `Miglior risultato: ${s.bestScore}/${s.lastTotal} &middot; ${s.attempts} tentativ${s.attempts===1?'o':'i'}`
+      : `${topic.questions.length} domande disponibili`;
+    div.innerHTML = `
+      <span class="topic-icon">${topic.icon}</span>
+      <div class="topic-info">
+        <div class="topic-name">${topic.label}</div>
+        <div class="topic-meta">${meta}</div>
+      </div>
+      <span class="topic-arrow">›</span>`;
+    list.appendChild(div);
+  });
+  showScreen('home');
+}
+
+// ============================================================
+// AVVIO QUIZ
+// ============================================================
+function startTopic(id) {
+  currentTopic = id;
+  questionPool = selectQuestions(id, currentDiff, 10);
+  currentIdx = 0;
+  score = 0;
+  sessionAnswers = [];
+  renderQuestion();
+  showScreen('quiz');
+}
+
+function goHome() {
+  renderHomeFixed();
+}
+
+// ============================================================
+// RENDERING DOMANDA
+// ============================================================
+function renderQuestion() {
+  const q = questionPool[currentIdx];
+  const total = questionPool.length;
+  const pct = (currentIdx / total) * 100;
+
+  $('progressFill').style.width = pct + '%';
+  $('quizCounter').textContent = (currentIdx + 1) + '/' + total;
+
+  const inner = $('quizInner');
+  inner.innerHTML = '';
+  inner.classList.remove('animate-in');
+  void inner.offsetWidth;
+  inner.classList.add('animate-in');
+
+  const topicName = DB[currentTopic].label;
+
+  const tagEl = document.createElement('div');
+  tagEl.className = 'quiz-topic-tag';
+  tagEl.textContent = topicName;
+
+  const qEl = document.createElement('div');
+  qEl.className = 'question-text';
+  qEl.textContent = q.q;
+
+  const optsEl = document.createElement('div');
+  optsEl.className = 'options';
+
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = opt;
+    btn.onclick = () => handleAnswer(i);
+    optsEl.appendChild(btn);
+  });
+
+  inner.appendChild(tagEl);
+  inner.appendChild(qEl);
+  inner.appendChild(optsEl);
+}
+
+// ============================================================
+// GESTIONE RISPOSTA
+// ============================================================
+function handleAnswer(selectedIdx) {
+  const q = questionPool[currentIdx];
+  const isCorrect = selectedIdx === q.c;
+  if (isCorrect) score++;
+
+  sessionAnswers.push({ qIdx: currentIdx, selected: selectedIdx, correct: isCorrect });
+
+  // colora le opzioni
+  const btns = document.querySelectorAll('.opt-btn');
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.c) btn.classList.add('correct');
+    else if (i === selectedIdx && !isCorrect) btn.classList.add('wrong');
+  });
+
+  // mostra spiegazione
+  const expBox = document.createElement('div');
+  expBox.className = 'explanation-box animate-in';
+  expBox.innerHTML = `<div class="explanation-label">📖 Spiegazione</div><div class="explanation-text">${q.e}</div>`;
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'next-btn';
+  const isLast = currentIdx + 1 >= questionPool.length;
+  nextBtn.textContent = isLast ? 'Vedi risultato →' : 'Prossima domanda →';
+  nextBtn.onclick = () => {
+    if (isLast) showResult();
+    else { currentIdx++; renderQuestion(); }
+  };
+
+  const inner = $('quizInner');
+  inner.appendChild(expBox);
+  inner.appendChild(nextBtn);
+
+  // update progress
+  $('progressFill').style.width = ((currentIdx + 1) / questionPool.length * 100) + '%';
+}
+
+// ============================================================
+// RISULTATO
+// ============================================================
+function showResult() {
+  const total = questionPool.length;
+
+  // salva statistiche
+  const prev = topicStats[currentTopic] || { attempts: 0, bestScore: 0, lastTotal: total };
+  topicStats[currentTopic] = {
+    attempts: prev.attempts + 1,
+    bestScore: Math.max(prev.bestScore, score),
+    lastTotal: total,
+  };
+
+  const pct = score / total;
+  const emoji = pct === 1 ? '🏆' : pct >= 0.8 ? '🌟' : pct >= 0.6 ? '👍' : '📚';
+  const msg = pct === 1 ? 'Perfetto! Dominio completo.' :
+              pct >= 0.8 ? 'Ottimo risultato!' :
+              pct >= 0.6 ? 'Buono, ma puoi migliorare.' :
+              'Ripassare ancora questo argomento.';
+
+  const inner = $('resultInner');
+  inner.innerHTML = '';
+
+  // intestazione
+  inner.innerHTML = `
+    <span class="result-emoji">${emoji}</span>
+    <div class="result-score">${score} / ${total}</div>
+    <div class="result-label">${msg}</div>
+    <div class="result-topic">${DB[currentTopic].label} &middot; difficoltà ${currentDiff === 'easy' ? 'Facile' : currentDiff === 'medium' ? 'Media' : 'Difficile'}</div>
+    <div class="result-actions">
+      <button class="btn-gold" onclick="startTopic('${currentTopic}')">🔄 Riprova</button>
+      <button class="btn-ghost" onclick="goHome()">🏠 Argomenti</button>
+    </div>
+    <div class="recap-card" id="recapCard">
+      <div class="recap-title">Riepilogo risposte</div>
+      <div id="recapItems"></div>
+    </div>
+  `;
+
+  const recapItems = $('recapItems');
+  sessionAnswers.forEach((a, i) => {
+    const q = questionPool[a.qIdx];
+    const item = document.createElement('div');
+    item.className = 'recap-item';
+    const correctText = q.opts[q.c];
+    const selectedText = q.opts[a.selected];
+    item.innerHTML = `
+      <span class="recap-icon">${a.correct ? '✅' : '❌'}</span>
+      <div>
+        <div class="recap-q">${q.q}</div>
+        ${!a.correct ? `<div class="recap-wrong">Risposta data: ${selectedText}</div><div class="recap-ans">Corretta: ${correctText}</div>` : `<div class="recap-ans">${correctText}</div>`}
+      </div>`;
+    recapItems.appendChild(item);
+  });
+
+  showScreen('result');
+}
+
+// ============================================================
+// AVVIO
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderHomeFixed();
+  setDiff('medium');
+});
+</script>
+</body>
+</html>
